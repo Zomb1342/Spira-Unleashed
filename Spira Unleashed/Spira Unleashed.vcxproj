@@ -22,7 +22,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{bda95fa0-4d2d-4974-891a-16d66e5abdde}</ProjectGuid>
-    <RootNamespace>FFXExternalHack</RootNamespace>
+    <RootNamespace>Spira Unleashed</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>Spira Unleashed</ProjectName>
   </PropertyGroup>
