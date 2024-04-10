@@ -22,7 +22,7 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 
 	while (true)
 	{
-		if (isPausePressed())																																// function call to check to see if user has pressed 'p' or 'P' to pause the program
+		if (isPausePressed())																
 		{
 			return;
 		}
@@ -38,22 +38,22 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 				LPVOID newMemAddr = VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);		// allocate new memory inside FFX.exe
 
 				uintptr_t codeSection = moduleBase + 0x1000;											// beginning of the ffx.exe.text portion of the process
-				uintptr_t ogAddr = codeSection + 0x38D3A9;												// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
+				uintptr_t ogAddr = codeSection + 0x38D3A9;											// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
 
-				JmpInstruction jmpNewMem = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr);			// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
+				JmpInstruction jmpNewMem = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr);							// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
 
-				JmpInstruction je = mem::prepAddrForJe((uintptr_t)newMemAddr, ogAddr,  7);				// same as the above line of code except for a je assembly instruction
-				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)newMemAddr), ogAddr, 23);		// The optional number at the end is how many bytes we have to add to newMemAddr to get the memory address the jmp is being written into memory at
+				JmpInstruction je = mem::prepAddrForJe((uintptr_t)newMemAddr, ogAddr,  7);							// same as the above line of code except for a je assembly instruction
+				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)newMemAddr), ogAddr, 23);						// The optional number at the end is how many bytes we have to add to newMemAddr to get the memory address the jmp is being written into memory at
 
 				BYTE* jeBytes = je.jmpBytes;
 				BYTE newCode[34];
 				memcpy(newCode, "\x83\xBE\xDC\x05\x00\x00\x00", 7);										// compares attacked entities ID value with 0
-				memcpy(newCode + 7, je.jmpBytes, je.size);												// jmp if its equal to 0 'indicating its a player and we are going to skip taking damage'
-				memcpy(newCode + (7 + je.size), "\xBF\x00\x00\x00\x00\x89\xBE\xD0\x05\x00\x00", 11);	// put 0 into the health of the entitiy being attacked
-				memcpy(newCode + (7 + je.size + 11), jmpOgMem.jmpBytes, jmpOgMem.size);					// return back to the memory address right after the intial jump we created for this hook
+				memcpy(newCode + 7, je.jmpBytes, je.size);											// jmp if its equal to 0 'indicating its a player and we are going to skip taking damage'
+				memcpy(newCode + (7 + je.size), "\xBF\x00\x00\x00\x00\x89\xBE\xD0\x05\x00\x00", 11);						// put 0 into the health of the entitiy being attacked
+				memcpy(newCode + (7 + je.size + 11), jmpOgMem.jmpBytes, jmpOgMem.size);								// return back to the memory address right after the intial jump we created for this hook
 
-				mem::PatchEx((BYTE*)ogAddr, jmpNewMem.jmpBytes, jmpNewMem.size, hProcess);				// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr'
-				mem::PatchEx((BYTE*)newMemAddr, newCode, sizeof(newCode), hProcess);					// patches the new memory we allocated with our bytes inside of 'newCode'
+				mem::PatchEx((BYTE*)ogAddr, jmpNewMem.jmpBytes, jmpNewMem.size, hProcess);							// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr'
+				mem::PatchEx((BYTE*)newMemAddr, newCode, sizeof(newCode), hProcess);								// patches the new memory we allocated with our bytes inside of 'newCode'
 
 				delete[] jmpOgMem.jmpBytes;
 				delete[] je.jmpBytes;
@@ -81,7 +81,7 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 		}
 		else
 			// max gil using direct byte manipulation using PatchEx Function from GuidedHacking
-			if (isFeatureEnabled("MAXGIL", featureMap))																													// calls maxGil once
+			if (isFeatureEnabled("MAXGIL", featureMap))																													
 			{
 				if (!gilFlag)
 				{
@@ -100,7 +100,7 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 			inventory.maxItems();
 		}
 		else
-			if (isFeatureEnabled("MAXITEMS", featureMap))																													// if only MAXITEMS are enabled fill item inventory to the max one time.
+			if (isFeatureEnabled("MAXITEMS", featureMap))																		// if only MAXITEMS are enabled fill item inventory to the max one time.
 			{
 				if (maxItemFlag = false)
 				{
@@ -386,23 +386,23 @@ void fillEquipment(HANDLE hProc, uintptr_t moduleBase, uint8_t choice)
 		for (uint8_t c = 0; c < 67; c++)
 		{
 			WriteProcessMemory(hProc, (BYTE*)equipmentSlot, &equipmentId, sizeof(equipmentId), 0);										// writes the weapon ID to the equipment slot starting at the 1st slot.
-			++equipmentId;																												// increment equipmentId by 1 to change the weapon we are adding each loop
+			++equipmentId;																			// increment equipmentId by 1 to change the weapon we are adding each loop
 
-			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0x3, &slotActivator, sizeof(slotActivator), 0);							// activates the slot so that if the slot does not exist in inventory yet it opens it
+			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0x3, &slotActivator, sizeof(slotActivator), 0);								// activates the slot so that if the slot does not exist in inventory yet it opens it
 
-			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0x5, &tidusWeaponIcon, sizeof(tidusWeaponIcon), 0);						// change the weapons icon to tidus's weapon
+			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0x5, &tidusWeaponIcon, sizeof(tidusWeaponIcon), 0);								// change the weapons icon to tidus's weapon
 
-			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0xB, &maxAbilitySlots, sizeof(maxAbilitySlots), 0);						// create 4 open ability slots in each weapon
+			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0xB, &maxAbilitySlots, sizeof(maxAbilitySlots), 0);								// create 4 open ability slots in each weapon
 
-			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0xC, &tidusWeaponModelId[c], sizeof(tidusWeaponModelId[c]), 0);			// writes to each weapon its correct model Id for the weapon
+			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0xC, &tidusWeaponModelId[c], sizeof(tidusWeaponModelId[c]), 0);						// writes to each weapon its correct model Id for the weapon
 
-			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0xD, &characterModel, sizeof(characterModel), 0);							// model ID glitches if we do not 0 this byte of memory out (The above address at equipmentSlot + 0xC will correspond to character models 
+			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0xD, &characterModel, sizeof(characterModel), 0);								// model ID glitches if we do not 0 this byte of memory out (The above address at equipmentSlot + 0xC will correspond to character models 
 			// so you would swing around characters as swords if we do not 0 out the memory at equipmentSlot + 0xD.
 
 			WriteProcessMemory(hProc, (BYTE*)equipmentSlot + 0x6, &unequipped, sizeof(unequipped), 0);									// this makes sure all the created weapons will be unequipped, the model glitch above can accure without this code as well
 			// I think because characters have tidus's weapons equipped as their weapon/armor but not compeletely sure.
 
-			equipmentSlot = equipmentSlot + equipmentSlotIncr;																			// increments equipmentSlot by 16 in hex (22 in decimal) and passes the value back into equipmentSlot to find the next slot in inventory
+			equipmentSlot = equipmentSlot + equipmentSlotIncr;														// increments equipmentSlot by 16 in hex (22 in decimal) and passes the value back into equipmentSlot to find the next slot in inventory
 		}
 		break;
 
