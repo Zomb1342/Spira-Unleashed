@@ -1,4 +1,4 @@
-Final Fantasy X External Hack I am writting in C++. It is far from finished.
+Final Fantasy X External Hack I am writting in C++. Some features work but it is far from finished.
 
 Simple menu is made through input / out of the console. 
 
