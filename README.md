@@ -1,9 +1,5 @@
 Final Fantasy X External Hack I am writting in C++. Some features work but it is far from finished.
 
-Simple menu is made through input / out of the console. 
-
-Externally hooked a function and wrote bytes directly to memory to create our GodMode & 1HitKO features.
-
 Working features are as follows:
 
 GODMODE & 1HITKO
