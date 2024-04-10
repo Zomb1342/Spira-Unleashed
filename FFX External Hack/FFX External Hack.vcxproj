@@ -24,6 +24,7 @@
     <ProjectGuid>{bda95fa0-4d2d-4974-891a-16d66e5abdde}</ProjectGuid>
     <RootNamespace>FFXExternalHack</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Spira Unleashed</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

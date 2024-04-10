@@ -35,7 +35,7 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 			// EXTERNAL HOOK!!! 
 			if (!godmodeFlag)
 			{
-				LPVOID newMemAddr = VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+				LPVOID newMemAddr = VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);		// allocate new memory inside FFX.exe
 
 				uintptr_t codeSection = moduleBase + 0x1000;											// beginning of the ffx.exe.text portion of the process
 				uintptr_t ogAddr = codeSection + 0x38D3A9;												// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
@@ -65,12 +65,12 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 		else
 			if (isFeatureEnabled("GODMODE", featureMap))
 			{
-				
+				// compare ID value, nop health decrement if its the player
 			}
 			else
 				if (isFeatureEnabled("1HITKO", featureMap))
 				{
-
+					// compare ID value, put 0 into entities health if it is a enemy
 				}
 
 
