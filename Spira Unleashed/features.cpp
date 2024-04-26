@@ -38,13 +38,21 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 			if (!godmodeFlag)
 			{
 				LPVOID newMemAddr = VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);		// allocate new memory inside FFX.exe
-				
+				if (!newMemAddr)
+				{
+					std::cout << "Memory Allocation Failed..." << std::endl;
+				}
+
+				int jmpSize = 5;
+				int jmpVarSize = 6;
 
 				uintptr_t codeSection = moduleBase + 0x1000;																	// beginning of the ffx.exe.text portion of the process
 				uintptr_t ogAddr = codeSection + 0x38D3A9;																		// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
+				int initialJmpPad = 1;
 
-				JmpInstruction jmpNewMem = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr);									// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
-				mem::PatchEx((BYTE*)ogAddr, jmpNewMem.jmpBytes, jmpNewMem.size, hProcess);										// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr' with a jump to 'newMemAddr'
+				JmpInstruction initialJmp = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr, initialJmpPad);					// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
+				BYTE* initialJmpBytes = initialJmp.jmpBytes.get();
+				mem::PatchEx((BYTE*)ogAddr, initialJmpBytes, initialJmp.size, hProcess);										// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr' with a jump to 'newMemAddr'
 
 				uintptr_t* pMemLoc = (uintptr_t*)&newMemAddr;																	// create a pointer to hold the current location in memory to calculate relative jumps beginning with 'newMemAddr'
 
@@ -53,8 +61,9 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 				
 				*pMemLoc = *pMemLoc + (sizeof(cmpEntId)-1);																		// update ptr to memory, subtract 1 from size of array because we want to ignore the null-terminator
 
-				JmpInstruction je = mem::prepAddrForJne((uintptr_t)*pMemLoc, ogAddr + 6);										// same as the above line of code except for a je assembly instruction
-				mem::PatchEx((BYTE*)*pMemLoc, je.jmpBytes, je.size, hProcess);
+				JmpInstruction je = mem::prepAddrForJne((uintptr_t)*pMemLoc, ogAddr + jmpVarSize);								// same as the above line of code except for a je assembly instruction
+				BYTE* jneBytes = je.jmpBytes.get();
+				mem::PatchEx((BYTE*)*pMemLoc, jneBytes, je.size, hProcess);
 				
 				*pMemLoc = *pMemLoc + je.size;																					// update ptr to current memory address
 
@@ -63,13 +72,9 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 				
 				*pMemLoc = *pMemLoc + (sizeof(killEnt)-1);
 
-				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)*pMemLoc), (ogAddr + 6));							
-				mem::PatchEx((BYTE*)*pMemLoc, jmpOgMem.jmpBytes, jmpOgMem.size, hProcess);
-
-
-				delete[] jmpOgMem.jmpBytes;
-				delete[] je.jmpBytes;
-				delete[] jmpNewMem.jmpBytes;
+				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)*pMemLoc), (ogAddr + (jmpSize + initialJmpPad)));		// When jumping back to the function we hooked, we need to add the size of jmp as well as any padding as added to the jmp as well back to the original address to calculate the relative offset					
+				BYTE* retJmp = jmpOgMem.jmpBytes.get();
+				mem::PatchEx((BYTE*)*pMemLoc, retJmp, jmpOgMem.size, hProcess);
 
 				godmodeFlag = true;
 			}

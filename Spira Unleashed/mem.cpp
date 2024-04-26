@@ -19,21 +19,27 @@ void mem::NopEx(BYTE* dst, unsigned int size, HANDLE hProcess)
 }
 
 
-JmpInstruction mem::prepAddrForJmp(uintptr_t currAddr, uintptr_t dstAddr)
+JmpInstruction mem::prepAddrForJmp(uintptr_t currAddr, uintptr_t dstAddr, int padding)
 {
     int32_t relativeOffset = (int32_t)(dstAddr - (currAddr + 5));                       // Add 5 to current address to account for the size of the jmp instruction.
 
+    int sizeOfJmp = 5 + padding;
 
-    BYTE* jmpInstruction = new BYTE[6]; 
+    BYTE* jmpInstruction = new BYTE[(sizeOfJmp)];
     jmpInstruction[0] = 0xE9;                                                            // JMP opcode
     jmpInstruction[1] = (relativeOffset & 0xFF);
     jmpInstruction[2] = ((relativeOffset >> 8) & 0xFF);
     jmpInstruction[3] = ((relativeOffset >> 16) & 0xFF);
     jmpInstruction[4] = ((relativeOffset >> 24) & 0xFF);
-    jmpInstruction[5] = 0x90;                                                             // NOP opcode for padding
+
+    for (int i = 5; i < (sizeOfJmp); i++)
+    {
+        jmpInstruction[i] = 0x90;
+    }
+
     JmpInstruction result{};
-    result.jmpBytes = jmpInstruction;
-    result.size = 6;
+    result.jmpBytes = std::unique_ptr<BYTE[]>(jmpInstruction);
+    result.size = sizeOfJmp;
 
     return result;
 }
@@ -42,17 +48,17 @@ JmpInstruction mem::prepAddrForJe(uintptr_t currAddr, uintptr_t dstAddr)
 {
     int32_t offset = (int32_t)(dstAddr - (currAddr + 6));                                 // add 6 to current address to account for size of the JE instruction
 
-    BYTE* jneInstruction = new BYTE[6]; 
-    jneInstruction[0] = 0x0F;       // JE opcode
-    jneInstruction[1] = 0x84;       // JE opcode
+    BYTE* jeInstruction = new BYTE[6]; 
+    jeInstruction[0] = 0x0F;       // JE opcode
+    jeInstruction[1] = 0x84;       // JE opcode
    
-    jneInstruction[2] = (offset & 0xFF);
-    jneInstruction[3] = ((offset >> 8) & 0xFF);
-    jneInstruction[4] = ((offset >> 16) & 0xFF);
-    jneInstruction[5] = ((offset >> 24) & 0xFF);
+    jeInstruction[2] = (offset & 0xFF);
+    jeInstruction[3] = ((offset >> 8) & 0xFF);
+    jeInstruction[4] = ((offset >> 16) & 0xFF);
+    jeInstruction[5] = ((offset >> 24) & 0xFF);
 
     JmpInstruction result;
-    result.jmpBytes = jneInstruction;
+    result.jmpBytes = std::unique_ptr<BYTE[]>(jeInstruction);
     result.size = 6; 
 
     return result;
@@ -72,7 +78,7 @@ JmpInstruction mem::prepAddrForJne(uintptr_t currAddr, uintptr_t dstAddr)
     jneInstruction[5] = ((offset >> 24) & 0xFF);
 
     JmpInstruction result;
-    result.jmpBytes = jneInstruction;
+    result.jmpBytes = std::unique_ptr<BYTE[]>(jneInstruction);
     result.size = 6;
 
     return result;

@@ -1,11 +1,12 @@
 #include <Windows.h>
 #include <cstdint>
+#include <memory>
 #pragma once
 
 struct JmpInstruction
 {
-	BYTE* jmpBytes;
-	size_t size;
+	std::unique_ptr<BYTE[]> jmpBytes = NULL;
+	size_t size = 0;
 };
 
 namespace mem
@@ -14,7 +15,7 @@ namespace mem
 
 	void NopEx(BYTE* dst, unsigned int size, HANDLE hProcess);
 
-	JmpInstruction prepAddrForJmp(uintptr_t currentAddress, uintptr_t destinationAddress);
+	JmpInstruction prepAddrForJmp(uintptr_t currentAddress, uintptr_t destinationAddress, int padding = 0);
 
 	JmpInstruction prepAddrForJe(uintptr_t currentAddress, uintptr_t destinationAddress);
 
