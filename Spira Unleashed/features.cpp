@@ -15,6 +15,8 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 
 	Inventory inventory(hProcess, moduleBase);
 
+
+
 	bool gilFlag = false;
 	bool maxItemFlag = false;
 	bool itemFlag = false;
@@ -36,24 +38,34 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 			if (!godmodeFlag)
 			{
 				LPVOID newMemAddr = VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);		// allocate new memory inside FFX.exe
+				
 
-				uintptr_t codeSection = moduleBase + 0x1000;											// beginning of the ffx.exe.text portion of the process
-				uintptr_t ogAddr = codeSection + 0x38D3A9;											// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
+				uintptr_t codeSection = moduleBase + 0x1000;																	// beginning of the ffx.exe.text portion of the process
+				uintptr_t ogAddr = codeSection + 0x38D3A9;																		// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
 
-				JmpInstruction jmpNewMem = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr);							// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
+				JmpInstruction jmpNewMem = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr);									// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
+				mem::PatchEx((BYTE*)ogAddr, jmpNewMem.jmpBytes, jmpNewMem.size, hProcess);										// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr' with a jump to 'newMemAddr'
 
-				JmpInstruction je = mem::prepAddrForJe((uintptr_t)newMemAddr, ogAddr,  7);							// same as the above line of code except for a je assembly instruction
-				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)newMemAddr), ogAddr, 23);						// The optional number at the end is how many bytes we have to add to newMemAddr to get the memory address the jmp is being written into memory at
+				uintptr_t* pMemLoc = (uintptr_t*)&newMemAddr;																	// create a pointer to hold the current location in memory to calculate relative jumps beginning with 'newMemAddr'
 
-				BYTE* jeBytes = je.jmpBytes;
-				BYTE newCode[34];
-				memcpy(newCode, "\x83\xBE\xDC\x05\x00\x00\x00", 7);										// compares attacked entities ID value with 0
-				memcpy(newCode + 7, je.jmpBytes, je.size);											// jmp if its equal to 0 'indicating its a player and we are going to skip taking damage'
-				memcpy(newCode + (7 + je.size), "\xBF\x00\x00\x00\x00\x89\xBE\xD0\x05\x00\x00", 11);						// put 0 into the health of the entitiy being attacked
-				memcpy(newCode + (7 + je.size + 11), jmpOgMem.jmpBytes, jmpOgMem.size);								// return back to the memory address right after the intial jump we created for this hook
+				BYTE cmpEntId[8] = "\x83\xBE\xE0\x06\x00\x00\x00";																// create a BYTE array to hold the bytes for the comparision of entities ID's
+				mem::PatchEx((BYTE*)*pMemLoc, cmpEntId, (sizeof(cmpEntId)-1), hProcess);										// patch memory of the beginning of our allocated memory
+				
+				*pMemLoc = *pMemLoc + (sizeof(cmpEntId)-1);																		// update ptr to memory, subtract 1 from size of array because we want to ignore the null-terminator
 
-				mem::PatchEx((BYTE*)ogAddr, jmpNewMem.jmpBytes, jmpNewMem.size, hProcess);							// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr'
-				mem::PatchEx((BYTE*)newMemAddr, newCode, sizeof(newCode), hProcess);								// patches the new memory we allocated with our bytes inside of 'newCode'
+				JmpInstruction je = mem::prepAddrForJne((uintptr_t)*pMemLoc, ogAddr + 6);										// same as the above line of code except for a je assembly instruction
+				mem::PatchEx((BYTE*)*pMemLoc, je.jmpBytes, je.size, hProcess);
+				
+				*pMemLoc = *pMemLoc + je.size;																					// update ptr to current memory address
+
+				BYTE killEnt[12] = "\xBF\x00\x00\x00\x00\x89\xBE\xD0\x05\x00\x00";												// kills entitity by replacing their health with 0
+				mem::PatchEx((BYTE*)*pMemLoc, killEnt, (sizeof(killEnt)-1), hProcess);											// patches the bytes to kill entitiy
+				
+				*pMemLoc = *pMemLoc + (sizeof(killEnt)-1);
+
+				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)*pMemLoc), (ogAddr + 6));							
+				mem::PatchEx((BYTE*)*pMemLoc, jmpOgMem.jmpBytes, jmpOgMem.size, hProcess);
+
 
 				delete[] jmpOgMem.jmpBytes;
 				delete[] je.jmpBytes;

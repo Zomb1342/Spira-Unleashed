@@ -14,8 +14,10 @@ namespace mem
 
 	void NopEx(BYTE* dst, unsigned int size, HANDLE hProcess);
 
-	JmpInstruction prepAddrForJmp(uintptr_t address, uintptr_t jmpTarget, int32_t bytesFromAddr = 5);
+	JmpInstruction prepAddrForJmp(uintptr_t currentAddress, uintptr_t destinationAddress);
 
-	JmpInstruction prepAddrForJe(uintptr_t address, uintptr_t jmpTarget, int32_t bytesFromAddr = 6);
+	JmpInstruction prepAddrForJe(uintptr_t currentAddress, uintptr_t destinationAddress);
+
+	JmpInstruction prepAddrForJne(uintptr_t currAddr, uintptr_t dstAddr);
 	
 }
