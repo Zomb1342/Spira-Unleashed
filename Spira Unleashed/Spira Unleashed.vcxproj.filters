@@ -15,6 +15,9 @@
     <Filter Include="proc">
       <UniqueIdentifier>{b0345e32-3215-42db-9176-7e6c00a49ea7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{df8b91fd-9ba9-4fd4-9999-6a26b5d7fd9c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consolemenu.h">
@@ -25,6 +28,15 @@
     </ClInclude>
     <ClInclude Include="proc.h">
       <Filter>proc</Filter>
+    </ClInclude>
+    <ClInclude Include="offsets.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="inventory.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="characters.h">
+      <Filter>Data</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

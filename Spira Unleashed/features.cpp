@@ -1,6 +1,9 @@
 #include "mem.h"
 #include "features.h"
+#include "characters.h"
 #include <conio.h>
+#include "inventory.h"
+
 
 void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::string, Feature>& featureMap)
 {
@@ -24,7 +27,7 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 
 	while (true)
 	{
-		if (isPausePressed())																
+		if (isPausePressed())
 		{
 			return;
 		}
@@ -37,44 +40,44 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 			// EXTERNAL HOOK!!! 
 			if (!godmodeFlag)
 			{
-				LPVOID newMemAddr = VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);		// allocate new memory inside FFX.exe
-				if (!newMemAddr)
+				int32_t ogAddr = (moduleBase + 0x1000) + 0x38D3A9;																								// calculate the address to hook and store it into a uintptr_t pointer 
+
+				int32_t const retAddr = (ogAddr + 6);
+
+				int32_t newAddr = (reinterpret_cast<int32_t>(VirtualAllocEx(hProcess, NULL, 1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)));			// allocate new memory inside FFX.exe and store the base address into a uintptr_t pointer
+
+				if (!newAddr)																																	// test to see if newMemAddr contains a value
 				{
 					std::cout << "Memory Allocation Failed..." << std::endl;
 				}
 
-				int jmpSize = 5;
-				int jmpVarSize = 6;
+				std::vector<std::byte> initialJmp = prepJmp(ogAddr, newAddr, JMP, 1);
 
-				uintptr_t codeSection = moduleBase + 0x1000;																	// beginning of the ffx.exe.text portion of the process
-				uintptr_t ogAddr = codeSection + 0x38D3A9;																		// add the base address of ffx.exe.text to the offset to the memory location to replace with a jmp instruction to initiate our hook
-				int initialJmpPad = 1;
+				mem::PatchEx((BYTE*)ogAddr, initialJmp, hProcess);																								// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr' with a jump to 'newMemAddr'
 
-				JmpInstruction initialJmp = mem::prepAddrForJmp(ogAddr, (uintptr_t)newMemAddr, initialJmpPad);					// adds a jmp instruction, converts a memory address to little endian, and to BYTE* style so we can patch it to memory
-				BYTE* initialJmpBytes = initialJmp.jmpBytes.get();
-				mem::PatchEx((BYTE*)ogAddr, initialJmpBytes, initialJmp.size, hProcess);										// patches the first jmp that creates our hook to memory replacing the memory at 'ogAddr' with a jump to 'newMemAddr'
+				std::array<std::byte, 7> cmpEntArray
+				{ std::byte(0xBE), std::byte(0xE0), std::byte(0x06), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
 
-				uintptr_t* pMemLoc = (uintptr_t*)&newMemAddr;																	// create a pointer to hold the current location in memory to calculate relative jumps beginning with 'newMemAddr'
+				// patch memory of the beginning of our allocated memory
+				mem::PatchEx((BYTE*)newAddr, cmpEntArray, hProcess);
 
-				BYTE cmpEntId[8] = "\x83\xBE\xE0\x06\x00\x00\x00";																// create a BYTE array to hold the bytes for the comparision of entities ID's
-				mem::PatchEx((BYTE*)*pMemLoc, cmpEntId, (sizeof(cmpEntId)-1), hProcess);										// patch memory of the beginning of our allocated memory
-				
-				*pMemLoc = *pMemLoc + (sizeof(cmpEntId)-1);																		// update ptr to memory, subtract 1 from size of array because we want to ignore the null-terminator
+				std::vector<std::byte> jmpEqual = prepJmp((newAddr + cmpEntArray.size()), retAddr, JE);																				// currAddr += 6 + padding 
 
-				JmpInstruction je = mem::prepAddrForJne((uintptr_t)*pMemLoc, ogAddr + jmpVarSize);								// same as the above line of code except for a je assembly instruction
-				BYTE* jneBytes = je.jmpBytes.get();
-				mem::PatchEx((BYTE*)*pMemLoc, jneBytes, je.size, hProcess);
-				
-				*pMemLoc = *pMemLoc + je.size;																					// update ptr to current memory address
+				mem::PatchEx((BYTE*)newAddr + cmpEntArray.size(), jmpEqual, hProcess);
 
-				BYTE killEnt[12] = "\xBF\x00\x00\x00\x00\x89\xBE\xD0\x05\x00\x00";												// kills entitity by replacing their health with 0
-				mem::PatchEx((BYTE*)*pMemLoc, killEnt, (sizeof(killEnt)-1), hProcess);											// patches the bytes to kill entitiy
-				
-				*pMemLoc = *pMemLoc + (sizeof(killEnt)-1);
+				std::array<std::byte, 11> killEnt
+				{
+					std::byte{ 0xBF }, std::byte{ 0x00 }, std::byte{ 0x00 },
+					std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x89 },
+					std::byte{ 0xBE }, std::byte{ 0xD0 }, std::byte{ 0x05 },
+					std::byte{ 0x00 }, std::byte{ 0x00 }
+				};
 
-				JmpInstruction jmpOgMem = mem::prepAddrForJmp(((uintptr_t)*pMemLoc), (ogAddr + (jmpSize + initialJmpPad)));		// When jumping back to the function we hooked, we need to add the size of jmp as well as any padding as added to the jmp as well back to the original address to calculate the relative offset					
-				BYTE* retJmp = jmpOgMem.jmpBytes.get();
-				mem::PatchEx((BYTE*)*pMemLoc, retJmp, jmpOgMem.size, hProcess);
+				mem::PatchEx((BYTE*)(newAddr + cmpEntArray.size() + jmpEqual.size()), killEnt, hProcess);																								// patches the bytes to kill entitiy
+
+				std::vector<std::byte> jmpOgMem = prepJmp((newAddr + cmpEntArray.size() + jmpEqual.size() + killEnt.size()), retAddr, JNE);																				// When jumping back to the function we hooked, we need to add the size of jmp as well as any padding as added to the jmp as well back to the original address to calculate the relative offset					
+
+				mem::PatchEx((BYTE*)retAddr, jmpOgMem, hProcess);
 
 				godmodeFlag = true;
 			}
@@ -98,15 +101,18 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 		}
 		else
 			// max gil using direct byte manipulation using PatchEx Function from GuidedHacking
-			if (isFeatureEnabled("MAXGIL", featureMap))																													
+			if (isFeatureEnabled("MAXGIL", featureMap))
 			{
 				if (!gilFlag)
 				{
 					BYTE* dstAddr = (BYTE*)(moduleBase + 0xD307D8);
-					BYTE srcData[] = { "\xFF\xC9\x9A\x3B\x00\x00\x00\x00\x00" };
-					unsigned int patchSize = sizeof(srcData);
+					std::array<std::byte, 9> srcData
+					{
+						std::byte{0xFF}, std::byte{0xC9}, std::byte{0x9A}, std::byte{0x3B}, std::byte{0x00},
+						std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}
+					};
 
-					mem::PatchEx(dstAddr, srcData, patchSize, hProcess);
+					mem::PatchEx(dstAddr, srcData, hProcess);
 
 					gilFlag = true;
 				}
@@ -327,11 +333,9 @@ void runEnabledFeatures(HANDLE hProcess, uintptr_t moduleBase, std::map<std::str
 			rikku.infiniteOverdrive();
 		}
 
+		// blitzball specific features
 	}
-
-
-	// blitzball specific features
-}
+};
 
 
 bool isPausePressed()

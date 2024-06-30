@@ -1,24 +1,28 @@
 #include <Windows.h>
 #include <cstdint>
 #include <memory>
+#include <vector>
+#include <array>
+
 #pragma once
 
-struct JmpInstruction
+enum JmpType
 {
-	std::unique_ptr<BYTE[]> jmpBytes = NULL;
-	size_t size = 0;
+	JMP,
+	JE,
+	JNE,
 };
+
+std::vector<std::byte> prepJmp(int32_t currAddr, int32_t destinationAddr, JmpType jmpType, int32_t padding = 0);
 
 namespace mem
 {
-	void PatchEx(BYTE* dst, BYTE* src, unsigned int size, HANDLE hProcess);
+
+	void PatchEx(BYTE* dst, std::vector<std::byte> src, HANDLE hProcess);
+
+	template<size_t x>
+	void PatchEx(BYTE* dst, std::array<std::byte, x> src, HANDLE hProcess);
 
 	void NopEx(BYTE* dst, unsigned int size, HANDLE hProcess);
-
-	JmpInstruction prepAddrForJmp(uintptr_t currentAddress, uintptr_t destinationAddress, int padding = 0);
-
-	JmpInstruction prepAddrForJe(uintptr_t currentAddress, uintptr_t destinationAddress);
-
-	JmpInstruction prepAddrForJne(uintptr_t currAddr, uintptr_t dstAddr);
 	
 }

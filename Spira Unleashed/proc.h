@@ -95,4 +95,4 @@ private:
 		pHandle = OpenProcess(PROCESS_ALL_ACCESS, NULL, procId);																									// get target processes handle
 	}
 
-};
+}procInfo;																																							// create an object of the class while defining it.
