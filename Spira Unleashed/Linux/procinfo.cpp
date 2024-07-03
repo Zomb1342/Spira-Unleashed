@@ -1,4 +1,4 @@
-#include "ProcInfo.h"
+#include "procinfo.h"
 
 ProcInfo::ProcInfo()
 {
@@ -82,7 +82,7 @@ pid_t ProcInfo::getProcessHandle() const
     return pHandle;
 }
 
-uintptr_t ProcInfo::getModuleBaseAddress() const
+long ProcInfo::getModuleBaseAddress() const
 {
     return modBaseAddr;
 }

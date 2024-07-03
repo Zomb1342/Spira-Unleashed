@@ -15,7 +15,7 @@ public:
     ProcInfo();
 
     pid_t getProcessHandle() const;
-    uintptr_t getModuleBaseAddress() const;
+    long getModuleBaseAddress() const;
 
 private:
     void getProcId();
@@ -27,7 +27,7 @@ private:
 
     pid_t procId = -1;
     pid_t pHandle = -1;
-    uintptr_t modBaseAddr = 0;
+    long modBaseAddr = 0;
 };
 
 #endif // PROCINFO_H
