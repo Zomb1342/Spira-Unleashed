@@ -16,7 +16,6 @@ Perm Max Stats for all characters
 
 Credits:
 GuidedHacking.com
-TheCherno on youtube
 learncpp.com
 Microsoft Copilot
 ChatGPT
