@@ -10,6 +10,7 @@ class Menu
 private:
 
 
+
 public:
 	std::map<std::string, Feature> globalFeatures;
 	std::map<std::string, Feature> charFeatures;
@@ -199,6 +200,13 @@ private:
 
 	}
 
+	void weaponMenu()
+	{
+		std::string menuTitle = "Weapon Creation Menu!"
+		int maxLength = 30;
+		std::cout << std::setw (menuTitle + 10);
+		std::cout << "
+
 	
 public:
 
@@ -214,6 +222,7 @@ public:
 	{
 		system("cls");
 		setConsoleWindowSize(120, 40);
+		weaponMenu();
 		// WeaponFeatures();
 	}
 
